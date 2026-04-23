@@ -1,0 +1,121 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.tox/
+.nox/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+
+# =========================
+# Jupyter / notebooks
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Environment / secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# IDE / OS
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# ML / experiment outputs
+# =========================
+runs/
+outputs/
+artifacts/
+results/
+predictions/
+reports/generated/
+tensorboard/
+wandb/
+mlruns/
+
+# =========================
+# Local data
+# =========================
+data/raw/
+data/interim/
+data/external/
+datasets/
+tmp/
+cache/
+
+# =========================
+# Models / checkpoints
+# =========================
+models/
+checkpoints/
+weights/
+*.ckpt
+*.pt
+*.pth
+*.pkl
+*.joblib
+*.onnx
+*.bin
+*.safetensors
+
+# =========================
+# Ollama-related local files
+# =========================
+ollama_logs/
+ollama_outputs/
+local_models/
+
+# =========================
+# Optional: ignore generated docs/files
+# =========================
+*.csv
+*.parquet
+*.feather
+*.npy
+*.npz
+
+# Keep structure if needed
+!data/.gitkeep
+!models/.gitkeep
+!outputs/.gitkeep
