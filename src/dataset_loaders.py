@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 from datasets import Dataset, load_dataset
 from huggingface_hub import hf_hub_download
@@ -37,11 +36,12 @@ def _flatten_squad_like_json(raw_obj: dict) -> list[dict]:
     return rows
 
 
+def _has_valid_answers(example) -> bool:
+    answers = example["answers"]["text"]
+    return any(isinstance(a, str) and a.strip() for a in answers)
+
+
 def load_ua_squad_validation_subset(n: int = 20) -> Dataset:
-    """
-    Завантажує validation split для UA-SQuAD напряму з HF Hub
-    і самостійно перетворює вкладений SQuAD-like JSON у плоский формат.
-    """
     file_path = hf_hub_download(
         repo_id="FIdo-AI/ua-squad",
         repo_type="dataset",
@@ -54,9 +54,12 @@ def load_ua_squad_validation_subset(n: int = 20) -> Dataset:
     rows = _flatten_squad_like_json(raw)
     ds = Dataset.from_list(rows)
 
+    ds = ds.filter(_has_valid_answers)
+
     return ds.select(range(min(n, len(ds))))
 
 
 def load_en_squad_validation_subset(n: int = 20) -> Dataset:
     ds = load_dataset("squad", split="validation")
+    ds = ds.filter(_has_valid_answers)
     return ds.select(range(min(n, len(ds))))
