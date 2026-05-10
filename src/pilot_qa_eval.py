@@ -14,16 +14,19 @@ from config import (
     UA_QA_SUBSET_SIZE,
     EN_QA_SUBSET_SIZE,
     GENERATION_CONFIG,
+    QUANTIZATION_NAME,
+    RUNTIME_PROCESSOR,
+    MODEL_SOURCE_REPO,
+    ARTIFACT_FAMILY,
+    QUANTIZATION_PIPELINE,
+    IMATRIX_USED,
+    MODEL_ROLE,
 )
 from dataset_loaders import (
     load_ua_squad_validation_subset,
     load_en_squad_validation_subset,
 )
 from ollama_runner import call_ollama_chat
-
-
-QUANTIZATION_NAME = "Q4_K_M"
-RUNTIME_PROCESSOR = "CPU"
 
 
 def next_experiment_version(results_dir, prefix: str) -> int:
@@ -224,6 +227,12 @@ def run_eval(
                 "runtime_processor": RUNTIME_PROCESSOR,
                 "requested_num_gpu": result.get("requested_num_gpu"),
 
+                "source_repo": MODEL_SOURCE_REPO,
+                "artifact_family": ARTIFACT_FAMILY,
+                "quantization_pipeline": QUANTIZATION_PIPELINE,
+                "imatrix_used": IMATRIX_USED,
+                "model_role": MODEL_ROLE,
+
                 "question": question,
                 "prediction": prediction,
                 "gold_answers": " | ".join(gold_answers),
@@ -300,6 +309,12 @@ def run_eval(
         "runtime_processor": RUNTIME_PROCESSOR,
         "requested_num_gpu": requested_num_gpu,
 
+        "source_repo": MODEL_SOURCE_REPO,
+        "artifact_family": ARTIFACT_FAMILY,
+        "quantization_pipeline": QUANTIZATION_PIPELINE,
+        "imatrix_used": IMATRIX_USED,
+        "model_role": MODEL_ROLE,
+
         "lang": lang,
         "subset": subset_name,
         "n_examples": len(df),
@@ -366,10 +381,17 @@ def main():
     experiment_version = f"v{version_num}"
 
     print(f"\n=== QA EXPERIMENT VERSION: {experiment_version} ===")
+    print(f"Model name: {PRIMARY_MODEL_NAME}")
+    print(f"Display name: {PRIMARY_MODEL_DISPLAY_NAME}")
     print(f"Backend: {BACKEND_NAME}")
     print(f"Quantization: {QUANTIZATION_NAME}")
     print(f"Runtime processor: {RUNTIME_PROCESSOR}")
     print(f"Requested num_gpu: {OLLAMA_NUM_GPU}")
+    print(f"Source repo: {MODEL_SOURCE_REPO}")
+    print(f"Artifact family: {ARTIFACT_FAMILY}")
+    print(f"Quantization pipeline: {QUANTIZATION_PIPELINE}")
+    print(f"Imatrix used: {IMATRIX_USED}")
+    print(f"Model role: {MODEL_ROLE}")
     print(f"UA subset size: {UA_QA_SUBSET_SIZE}")
     print(f"EN subset size: {EN_QA_SUBSET_SIZE}")
 

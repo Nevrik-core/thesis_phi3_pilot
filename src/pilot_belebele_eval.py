@@ -12,6 +12,13 @@ from config import (
     OLLAMA_NUM_GPU,
     BELEBELE_SUBSET_SIZE,
     MC_GENERATION_CONFIG,
+    QUANTIZATION_NAME,
+    RUNTIME_PROCESSOR,
+    MODEL_SOURCE_REPO,
+    ARTIFACT_FAMILY,
+    QUANTIZATION_PIPELINE,
+    IMATRIX_USED,
+    MODEL_ROLE,
 )
 from ollama_runner import call_ollama_chat
 
@@ -143,6 +150,30 @@ def generate_answer(prompt: str) -> dict:
     )
 
 
+def safe_mean(df: pd.DataFrame, column: str, digits: int = 4):
+    if column not in df.columns or len(df) == 0:
+        return 0.0
+
+    values = df[column].dropna()
+
+    if values.empty:
+        return 0.0
+
+    return round(float(values.mean()), digits)
+
+
+def safe_max(df: pd.DataFrame, column: str, digits: int = 4):
+    if column not in df.columns or len(df) == 0:
+        return 0.0
+
+    values = df[column].dropna()
+
+    if values.empty:
+        return 0.0
+
+    return round(float(values.max()), digits)
+
+
 def run_eval(
     dataset,
     lang: str,
@@ -181,7 +212,15 @@ def run_eval(
 
                 "model_name": PRIMARY_MODEL_DISPLAY_NAME,
                 "backend_name": BACKEND_NAME,
+                "quantization_name": QUANTIZATION_NAME,
+                "runtime_processor": RUNTIME_PROCESSOR,
                 "requested_num_gpu": result.get("requested_num_gpu"),
+
+                "source_repo": MODEL_SOURCE_REPO,
+                "artifact_family": ARTIFACT_FAMILY,
+                "quantization_pipeline": QUANTIZATION_PIPELINE,
+                "imatrix_used": IMATRIX_USED,
+                "model_role": MODEL_ROLE,
 
                 "question": ex["question"],
                 "choice_a": ex["choice_a"],
@@ -254,61 +293,65 @@ def run_eval(
 
     summary = {
         "experiment_version": experiment_version,
+
         "model_name": PRIMARY_MODEL_DISPLAY_NAME,
         "backend_name": BACKEND_NAME,
+        "quantization_name": QUANTIZATION_NAME,
+        "runtime_processor": RUNTIME_PROCESSOR,
         "requested_num_gpu": requested_num_gpu,
+
+        "source_repo": MODEL_SOURCE_REPO,
+        "artifact_family": ARTIFACT_FAMILY,
+        "quantization_pipeline": QUANTIZATION_PIPELINE,
+        "imatrix_used": IMATRIX_USED,
+        "model_role": MODEL_ROLE,
+
         "lang": lang,
         "subset": subset_name,
         "n_examples": len(df),
 
-        "accuracy": round(float(df["is_correct"].mean()), 4) if len(df) else 0.0,
+        "accuracy": safe_mean(df, "is_correct", digits=4),
         "invalid_answer_rate": (
             round(float(1.0 - df["is_valid_answer"].mean()), 4)
             if len(df)
             else 0.0
         ),
 
-        "avg_wall_time_sec": (
-            round(float(df["wall_time_sec"].mean()), 4) if len(df) else 0.0
+        "avg_wall_time_sec": safe_mean(df, "wall_time_sec", digits=4),
+        "avg_total_duration_sec": safe_mean(df, "total_duration_sec", digits=4),
+        "avg_load_duration_sec": safe_mean(df, "load_duration_sec", digits=4),
+
+        "avg_prompt_tokens_per_sec": safe_mean(
+            df,
+            "prompt_tokens_per_sec",
+            digits=4,
         ),
-        "avg_total_duration_sec": (
-            round(float(df["total_duration_sec"].mean()), 4) if len(df) else 0.0
-        ),
-        "avg_load_duration_sec": (
-            round(float(df["load_duration_sec"].mean()), 4) if len(df) else 0.0
+        "avg_generation_tokens_per_sec": safe_mean(
+            df,
+            "generation_tokens_per_sec",
+            digits=4,
         ),
 
-        "avg_prompt_tokens_per_sec": (
-            round(float(df["prompt_tokens_per_sec"].dropna().mean()), 4)
-            if len(df)
-            else 0.0
+        "avg_model_process_peak_rss_mb": safe_mean(
+            df,
+            "model_process_peak_rss_mb",
+            digits=2,
         ),
-        "avg_generation_tokens_per_sec": (
-            round(float(df["generation_tokens_per_sec"].dropna().mean()), 4)
-            if len(df)
-            else 0.0
-        ),
-
-        "avg_model_process_peak_rss_mb": (
-            round(float(df["model_process_peak_rss_mb"].dropna().mean()), 2)
-            if len(df)
-            else 0.0
-        ),
-        "max_model_process_peak_rss_mb": (
-            round(float(df["model_process_peak_rss_mb"].dropna().max()), 2)
-            if len(df)
-            else 0.0
+        "max_model_process_peak_rss_mb": safe_max(
+            df,
+            "model_process_peak_rss_mb",
+            digits=2,
         ),
 
-        "avg_system_used_memory_peak_mb": (
-            round(float(df["system_used_memory_peak_mb"].dropna().mean()), 2)
-            if len(df)
-            else 0.0
+        "avg_system_used_memory_peak_mb": safe_mean(
+            df,
+            "system_used_memory_peak_mb",
+            digits=2,
         ),
-        "max_system_used_memory_peak_mb": (
-            round(float(df["system_used_memory_peak_mb"].dropna().max()), 2)
-            if len(df)
-            else 0.0
+        "max_system_used_memory_peak_mb": safe_max(
+            df,
+            "system_used_memory_peak_mb",
+            digits=2,
         ),
     }
 
@@ -319,13 +362,23 @@ def main():
     details_prefix = (
         f"pilot_belebele_details_{BACKEND_NAME}_{BELEBELE_SUBSET_SIZE}"
     )
+
     version_num = next_experiment_version(RESULTS_DIR, details_prefix)
     experiment_version = f"v{version_num}"
 
-    print(f"\n=== EXPERIMENT VERSION: {experiment_version} ===")
+    print(f"\n=== BELEBELE EXPERIMENT VERSION: {experiment_version} ===")
+    print(f"Model name: {PRIMARY_MODEL_NAME}")
+    print(f"Display name: {PRIMARY_MODEL_DISPLAY_NAME}")
     print(f"Backend: {BACKEND_NAME}")
-    print(f"Subset size: {BELEBELE_SUBSET_SIZE}")
+    print(f"Quantization: {QUANTIZATION_NAME}")
+    print(f"Runtime processor: {RUNTIME_PROCESSOR}")
     print(f"Requested num_gpu: {OLLAMA_NUM_GPU}")
+    print(f"Source repo: {MODEL_SOURCE_REPO}")
+    print(f"Artifact family: {ARTIFACT_FAMILY}")
+    print(f"Quantization pipeline: {QUANTIZATION_PIPELINE}")
+    print(f"Imatrix used: {IMATRIX_USED}")
+    print(f"Model role: {MODEL_ROLE}")
+    print(f"Subset size: {BELEBELE_SUBSET_SIZE}")
 
     uk_ds, en_ds = load_belebele_uk_en_subsets(BELEBELE_SUBSET_SIZE)
 
