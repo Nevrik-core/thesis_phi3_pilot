@@ -1,3 +1,4 @@
+# src/config.py
 import os
 from pathlib import Path
 
@@ -30,6 +31,8 @@ EN_QA_SUBSET_SIZE = 100
 
 BELEBELE_SUBSET_SIZE = 100
 
+UALIGN_SUBSET_SIZE = 100
+
 
 # ============================================================
 # Datasets
@@ -41,6 +44,10 @@ EN_DATASET_NAME = "squad"
 BELEBELE_DATASET_NAME = "facebook/belebele"
 BELEBELE_UK_LANG = "ukr_Cyrl"
 BELEBELE_EN_LANG = "eng_Latn"
+
+UALIGN_DATASET_NAME = "Stereotypes-in-LLMs/UAlign"
+UALIGN_ETHICS_CONFIG = "ETHICS"
+UALIGN_SOCIAL_CHEMISTRY_CONFIG = "Social Chemistry 101"
 
 
 # ============================================================

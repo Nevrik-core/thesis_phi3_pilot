@@ -1,3 +1,4 @@
+# src/pilot_belebele_eval.py
 import re
 
 import pandas as pd
@@ -19,6 +20,12 @@ from config import (
     QUANTIZATION_PIPELINE,
     IMATRIX_USED,
     MODEL_ROLE,
+)
+from eval_utils import (
+    make_experiment_output_dir,
+    resolve_experiment_version,
+    safe_max,
+    safe_mean,
 )
 from ollama_runner import call_ollama_chat
 
@@ -47,24 +54,6 @@ CYR_TO_LAT = str.maketrans(
         "д": "D",
     }
 )
-
-
-def next_experiment_version(results_dir, prefix: str) -> int:
-    existing_versions = []
-
-    for path in results_dir.glob(f"{prefix}_v*.csv"):
-        stem = path.stem
-
-        try:
-            version_part = stem.rsplit("_v", 1)[1]
-            existing_versions.append(int(version_part))
-        except (IndexError, ValueError):
-            continue
-
-    if not existing_versions:
-        return 1
-
-    return max(existing_versions) + 1
 
 
 def make_prompt_uk(example: dict) -> str:
@@ -114,12 +103,12 @@ def extract_choice(text: str) -> str | None:
 
     cleaned = text.strip().translate(CYR_TO_LAT).upper()
 
-    # Прямі короткі відповіді: A, A., A), (A)
+    # Direct short answers: A, A., A), (A)
     match = re.search(r"^\s*\(?\s*([ABCD])\s*\)?[\.\:]?\s*$", cleaned)
     if match:
         return match.group(1)
 
-    # Відповідь: A / Answer: A / Correct answer is A
+    # Answer: A / Correct answer is A
     patterns = [
         r"(?:ANSWER|ВІДПОВІДЬ)\s*(?:IS|Є|:)?\s*\(?\s*([ABCD])\b",
         r"(?:CORRECT\s+ANSWER\s+IS)\s*\(?\s*([ABCD])\b",
@@ -131,7 +120,7 @@ def extract_choice(text: str) -> str | None:
         if match:
             return match.group(1)
 
-    # Fallback: перша ізольована літера A/B/C/D
+    # Fallback: first isolated A/B/C/D label
     match = re.search(r"\b([ABCD])\b", cleaned)
     if match:
         return match.group(1)
@@ -148,30 +137,6 @@ def generate_answer(prompt: str) -> dict:
         num_ctx=MC_GENERATION_CONFIG.get("num_ctx", 2048),
         num_gpu=OLLAMA_NUM_GPU,
     )
-
-
-def safe_mean(df: pd.DataFrame, column: str, digits: int = 4):
-    if column not in df.columns or len(df) == 0:
-        return 0.0
-
-    values = df[column].dropna()
-
-    if values.empty:
-        return 0.0
-
-    return round(float(values.mean()), digits)
-
-
-def safe_max(df: pd.DataFrame, column: str, digits: int = 4):
-    if column not in df.columns or len(df) == 0:
-        return 0.0
-
-    values = df[column].dropna()
-
-    if values.empty:
-        return 0.0
-
-    return round(float(values.max()), digits)
 
 
 def run_eval(
@@ -363,10 +328,11 @@ def main():
         f"pilot_belebele_details_{BACKEND_NAME}_{BELEBELE_SUBSET_SIZE}"
     )
 
-    version_num = next_experiment_version(RESULTS_DIR, details_prefix)
-    experiment_version = f"v{version_num}"
+    experiment_version = resolve_experiment_version(RESULTS_DIR, details_prefix)
+    output_dir = make_experiment_output_dir(RESULTS_DIR, experiment_version)
 
     print(f"\n=== BELEBELE EXPERIMENT VERSION: {experiment_version} ===")
+    print(f"Output dir: {output_dir}")
     print(f"Model name: {PRIMARY_MODEL_NAME}")
     print(f"Display name: {PRIMARY_MODEL_DISPLAY_NAME}")
     print(f"Backend: {BACKEND_NAME}")
@@ -400,12 +366,12 @@ def main():
     summary_df = pd.DataFrame([uk_summary, en_summary])
 
     details_path = (
-        RESULTS_DIR
+        output_dir
         / f"pilot_belebele_details_{BACKEND_NAME}_{BELEBELE_SUBSET_SIZE}_{experiment_version}.csv"
     )
 
     summary_path = (
-        RESULTS_DIR
+        output_dir
         / f"pilot_belebele_summary_{BACKEND_NAME}_{BELEBELE_SUBSET_SIZE}_{experiment_version}.csv"
     )
 
