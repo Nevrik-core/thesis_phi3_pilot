@@ -26,12 +26,12 @@ RANDOM_SEED = 42
 # Dataset sizes
 # ============================================================
 
-UA_QA_SUBSET_SIZE = 100
-EN_QA_SUBSET_SIZE = 100
+UA_QA_SUBSET_SIZE = 1000
+EN_QA_SUBSET_SIZE = 1000
 
-BELEBELE_SUBSET_SIZE = 100
+BELEBELE_SUBSET_SIZE = 1000
 
-UALIGN_SUBSET_SIZE = 100
+UALIGN_SUBSET_SIZE = 1000
 
 
 # ============================================================
