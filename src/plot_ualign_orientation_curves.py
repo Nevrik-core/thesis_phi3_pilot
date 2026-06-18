@@ -1,4 +1,3 @@
-# src/plot_ualign_orientation_curves.py
 from __future__ import annotations
 
 import argparse

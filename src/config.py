@@ -1,4 +1,3 @@
-# src/config.py
 import os
 from pathlib import Path
 
@@ -172,24 +171,6 @@ OLLAMA_GGUF_MODELS = {
         "model_role": "main_same_runtime_curve",
     },
 
-    # ------------------------------------------------------------
-    # Optional extreme compression.
-    #
-    # In direct Ollama HF tag smoke test, Q3_K_M returned 404.
-    # Keep this in config for later manual Modelfile usage, but do
-    # not include it in WEEK2_GGUF_MODEL_KEYS yet.
-    # ------------------------------------------------------------
-    "bartowski_q3_k_m": {
-        "model_name": "hf.co/bartowski/microsoft_Phi-4-mini-instruct-GGUF:Q3_K_M",
-        "display_name": "Phi-4-mini-instruct GGUF Q3_K_M",
-        "backend_name": "ollama_cpu_gguf_bartowski_q3_k_m",
-        "quantization_name": "Q3_K_M",
-        "source_repo": "bartowski/microsoft_Phi-4-mini-instruct-GGUF",
-        "artifact_family": "GGUF",
-        "quantization_pipeline": "llama.cpp_b4792_imatrix",
-        "imatrix_used": "true",
-        "model_role": "optional_extreme_compression",
-    },
 
     # ------------------------------------------------------------
     # Cross-source sanity check.
@@ -232,9 +213,7 @@ ACTIVE_OLLAMA_MODEL_KEY = os.getenv(
 
 
 # Main Week 2 full-run matrix.
-#
-# This is the set we want for the report:
-# BF16 reference + Bartowski Q8/Q6/Q5/Q4 same-runtime curve.
+
 WEEK2_GGUF_MODEL_KEYS = [
     "professorf_bf16",
     "bartowski_q8_0",
@@ -254,8 +233,6 @@ SMOKE_GGUF_MODEL_KEYS = [
     "bartowski_q6_k",
     "bartowski_q5_k_m",
     "bartowski_q4_k_m",
-    "bartowski_q3_k_m",
-    "professorf_q4_k_m",
 ]
 
 

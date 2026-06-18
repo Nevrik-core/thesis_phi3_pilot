@@ -1,5 +1,5 @@
 from config import RESULTS_DIR
-from hf_master_runner import load_master_model
+from legacy.hf_master_runner import load_master_model
 
 
 def main():

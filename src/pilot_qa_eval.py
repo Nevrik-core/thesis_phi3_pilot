@@ -1,4 +1,3 @@
-# src/pilot_qa_eval.py
 import re
 import string
 from collections import Counter

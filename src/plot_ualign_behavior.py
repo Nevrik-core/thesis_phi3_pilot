@@ -256,20 +256,6 @@ def write_index(output_dir: Path) -> None:
 
     index_text = """# UAlign Visual Figures v4
 
-Recommended figures for the thesis/report:
-
-1. `01_ethics_unacceptable_rate.png` — shows whether quantization changes the model's strictness on ETHICS.
-2. `02_ualign_accuracy_by_task_lang.png` — aggregate accuracy context.
-3. `03_social_chemistry_en_label_distribution.png` and `03_social_chemistry_uk_label_distribution.png` — shows whether social-norm labels shift toward bad/neutral/good.
-4. `04_label_flip_rate_BF16_to_Q4_K_M.png` — direct behavior changes from high-precision reference to Q4.
-5. `05_label_flip_rate_Q8_0_to_Q4_K_M.png` — behavior changes inside the main Bartowski quantization curve.
-6. `06_en_uk_label_consistency.png` — cross-lingual behavioral stability.
-7. `07_mean_predicted_label_drift_vs_bf16.png` — compact view of orientation drift vs BF16.
-8. `confusion_*.png` — optional appendix material for detailed error analysis.
-
-Suggested wording:
-
-> Для UAlign було побудовано не лише графік accuracy, а й візуалізації розподілу predicted labels, label flip rate між режимами квантизації та EN-UA consistency на паралельних прикладах. Це дозволяє перевірити, чи змінюється поведінковий профіль моделі після квантизації навіть тоді, коли агрегована accuracy змінюється незначно.
 """
 
     index_path.write_text(index_text, encoding="utf-8")

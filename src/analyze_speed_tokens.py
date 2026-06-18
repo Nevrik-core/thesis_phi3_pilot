@@ -1,4 +1,3 @@
-# src/analyze_speed_tokens.py
 from __future__ import annotations
 
 import argparse

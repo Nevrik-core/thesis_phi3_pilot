@@ -1,4 +1,3 @@
-# src/eval_utils.py
 import os
 from pathlib import Path
 

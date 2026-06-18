@@ -1,4 +1,3 @@
-# src/run_week3_gguf_matrix.py
 import os
 import re
 import subprocess

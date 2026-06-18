@@ -9,7 +9,7 @@ from dataset_loaders import (
     load_ua_squad_validation_subset,
     load_en_squad_validation_subset,
 )
-from hf_master_runner import call_hf_master_chat
+from legacy.hf_master_runner import call_hf_master_chat
 from config import RESULTS_DIR, UA_QA_SUBSET_SIZE, EN_QA_SUBSET_SIZE
 
 

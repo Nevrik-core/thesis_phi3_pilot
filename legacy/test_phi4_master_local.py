@@ -1,4 +1,4 @@
-from hf_master_runner import call_hf_master_chat
+from legacy.hf_master_runner import call_hf_master_chat
 
 
 def main():

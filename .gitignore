@@ -67,7 +67,6 @@ logs/
 runs/
 outputs/
 artifacts/
-results/
 predictions/
 reports/generated/
 tensorboard/

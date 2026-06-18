@@ -1,4 +1,3 @@
-# src/analyze_qa_content_accuracy.py
 from __future__ import annotations
 
 import argparse
@@ -198,9 +197,7 @@ def fuzzy_uk_content_match(prediction: str, gold: str) -> bool:
 
     ratio = SequenceMatcher(None, pred_canonical, gold_canonical).ratio()
 
-    # Useful for Ukrainian cases like:
-    # Франція / Франції
-    # католицизм / католицизмом
+
     if ratio >= 0.82:
         return True
 

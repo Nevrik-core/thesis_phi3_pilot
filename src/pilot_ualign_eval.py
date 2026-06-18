@@ -1,4 +1,3 @@
-# src/pilot_ualign_eval.py
 import re
 
 import pandas as pd
