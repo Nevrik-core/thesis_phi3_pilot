@@ -19,6 +19,9 @@ from config import (
     QUANTIZATION_PIPELINE,
     IMATRIX_USED,
     MODEL_ROLE,
+    PROMPT_PREFIX,
+    OLLAMA_THINK,
+    REASONING_MODE,
 )
 from eval_utils import (
     make_experiment_output_dir,
@@ -29,16 +32,6 @@ from eval_utils import (
 from ollama_runner import call_ollama_chat
 
 
-# Normalization note:
-# The benchmark expects Latin answer labels: A, B, C, D.
-# In Ukrainian prompts, the model may sometimes return Cyrillic-looking labels
-# such as "Б" for option B, "В" as a visual substitute for Latin B,
-# "С" as a visual substitute for Latin C, or "Д" for option D.
-# We normalize these labels to avoid counting formatting/script variants
-# as invalid answers when the intended option is clear.
-#
-# This normalization affects only the predicted multiple-choice label,
-# not the question text, passage, or answer options.
 CYR_TO_LAT = str.maketrans(
     {
         "А": "A",
@@ -102,12 +95,10 @@ def extract_choice(text: str) -> str | None:
 
     cleaned = text.strip().translate(CYR_TO_LAT).upper()
 
-    # Direct short answers: A, A., A), (A)
     match = re.search(r"^\s*\(?\s*([ABCD])\s*\)?[\.\:]?\s*$", cleaned)
     if match:
         return match.group(1)
 
-    # Answer: A / Correct answer is A
     patterns = [
         r"(?:ANSWER|ВІДПОВІДЬ)\s*(?:IS|Є|:)?\s*\(?\s*([ABCD])\b",
         r"(?:CORRECT\s+ANSWER\s+IS)\s*\(?\s*([ABCD])\b",
@@ -119,7 +110,6 @@ def extract_choice(text: str) -> str | None:
         if match:
             return match.group(1)
 
-    # Fallback: first isolated A/B/C/D label
     match = re.search(r"\b([ABCD])\b", cleaned)
     if match:
         return match.group(1)
@@ -128,22 +118,24 @@ def extract_choice(text: str) -> str | None:
 
 
 def generate_answer(prompt: str) -> dict:
+    max_new_tokens = MC_GENERATION_CONFIG.get("max_new_tokens", 4)
+
+    if REASONING_MODE in {"think", "reasoning_only", "default_or_hybrid"}:
+        max_new_tokens = max(max_new_tokens, 1024)
+
     return call_ollama_chat(
         prompt=prompt,
         model=PRIMARY_MODEL_NAME,
         temperature=MC_GENERATION_CONFIG.get("temperature", 0.0),
-        max_new_tokens=MC_GENERATION_CONFIG.get("max_new_tokens", 4),
+        max_new_tokens=max_new_tokens,
         num_ctx=MC_GENERATION_CONFIG.get("num_ctx", 2048),
         num_gpu=OLLAMA_NUM_GPU,
+        prompt_prefix=PROMPT_PREFIX,
+        ollama_think=OLLAMA_THINK,
     )
 
 
-def run_eval(
-    dataset,
-    lang: str,
-    subset_name: str,
-    experiment_version: str,
-):
+def run_eval(dataset, lang: str, subset_name: str, experiment_version: str):
     rows = []
 
     for example in tqdm(
@@ -168,80 +160,58 @@ def run_eval(
         rows.append(
             {
                 "experiment_version": experiment_version,
-
                 "example_id": ex.get("id", ""),
                 "lang": lang,
                 "lang_code": ex["lang_code"],
                 "subset": subset_name,
-
                 "model_name": PRIMARY_MODEL_DISPLAY_NAME,
                 "backend_name": BACKEND_NAME,
                 "quantization_name": QUANTIZATION_NAME,
                 "runtime_processor": RUNTIME_PROCESSOR,
                 "requested_num_gpu": result.get("requested_num_gpu"),
-
+                "requested_ollama_think": result.get("requested_ollama_think"),
                 "source_repo": MODEL_SOURCE_REPO,
                 "artifact_family": ARTIFACT_FAMILY,
                 "quantization_pipeline": QUANTIZATION_PIPELINE,
                 "imatrix_used": IMATRIX_USED,
                 "model_role": MODEL_ROLE,
-
+                "reasoning_mode": REASONING_MODE,
+                "prompt_prefix": PROMPT_PREFIX,
                 "question": ex["question"],
                 "choice_a": ex["choice_a"],
                 "choice_b": ex["choice_b"],
                 "choice_c": ex["choice_c"],
                 "choice_d": ex["choice_d"],
-
                 "raw_prediction": raw_prediction,
+                "raw_content": result.get("raw_content", ""),
+                "thinking": result.get("thinking", ""),
+                "has_thinking": result.get("has_thinking"),
+                "clean_text_source": result.get("clean_text_source"),
+                "used_thinking_fallback": result.get("used_thinking_fallback"),
                 "predicted_letter": predicted_letter,
                 "gold_letter": ex["correct_letter"],
                 "is_valid_answer": int(is_valid),
                 "is_correct": is_correct,
-
                 "wall_time_sec": result["wall_time_sec"],
                 "total_duration_sec": result["total_duration_sec"],
                 "load_duration_sec": result["load_duration_sec"],
-
                 "prompt_eval_count": result["prompt_eval_count"],
+                "prompt_eval_duration_sec": result["prompt_eval_duration_sec"],
                 "eval_count": result["eval_count"],
+                "eval_duration_sec": result["eval_duration_sec"],
                 "prompt_tokens_per_sec": result["prompt_tokens_per_sec"],
                 "generation_tokens_per_sec": result["generation_tokens_per_sec"],
-
-                "client_process_rss_before_mb": result.get(
-                    "client_process_rss_before_mb"
-                ),
-                "client_process_rss_after_mb": result.get(
-                    "client_process_rss_after_mb"
-                ),
-                "client_process_peak_rss_mb": result.get(
-                    "client_process_peak_rss_mb"
-                ),
-
-                "model_process_rss_before_mb": result.get(
-                    "model_process_rss_before_mb"
-                ),
-                "model_process_rss_after_mb": result.get(
-                    "model_process_rss_after_mb"
-                ),
-                "model_process_peak_rss_mb": result.get(
-                    "model_process_peak_rss_mb"
-                ),
-                "model_process_count_before": result.get(
-                    "model_process_count_before"
-                ),
-                "model_process_count_after": result.get(
-                    "model_process_count_after"
-                ),
-
-                "system_used_memory_before_mb": result.get(
-                    "system_used_memory_before_mb"
-                ),
-                "system_used_memory_after_mb": result.get(
-                    "system_used_memory_after_mb"
-                ),
-                "system_used_memory_peak_mb": result.get(
-                    "system_used_memory_peak_mb"
-                ),
+                "client_process_rss_before_mb": result.get("client_process_rss_before_mb"),
+                "client_process_rss_after_mb": result.get("client_process_rss_after_mb"),
+                "client_process_peak_rss_mb": result.get("client_process_peak_rss_mb"),
+                "model_process_rss_before_mb": result.get("model_process_rss_before_mb"),
+                "model_process_rss_after_mb": result.get("model_process_rss_after_mb"),
+                "model_process_peak_rss_mb": result.get("model_process_peak_rss_mb"),
+                "model_process_count_before": result.get("model_process_count_before"),
+                "model_process_count_after": result.get("model_process_count_after"),
+                "system_used_memory_before_mb": result.get("system_used_memory_before_mb"),
+                "system_used_memory_after_mb": result.get("system_used_memory_after_mb"),
+                "system_used_memory_peak_mb": result.get("system_used_memory_peak_mb"),
             }
         )
 
@@ -257,66 +227,38 @@ def run_eval(
 
     summary = {
         "experiment_version": experiment_version,
-
         "model_name": PRIMARY_MODEL_DISPLAY_NAME,
         "backend_name": BACKEND_NAME,
         "quantization_name": QUANTIZATION_NAME,
         "runtime_processor": RUNTIME_PROCESSOR,
         "requested_num_gpu": requested_num_gpu,
-
+        "requested_ollama_think": OLLAMA_THINK,
         "source_repo": MODEL_SOURCE_REPO,
         "artifact_family": ARTIFACT_FAMILY,
         "quantization_pipeline": QUANTIZATION_PIPELINE,
         "imatrix_used": IMATRIX_USED,
         "model_role": MODEL_ROLE,
-
+        "reasoning_mode": REASONING_MODE,
         "lang": lang,
         "subset": subset_name,
         "n_examples": len(df),
-
         "accuracy": safe_mean(df, "is_correct", digits=4),
         "invalid_answer_rate": (
             round(float(1.0 - df["is_valid_answer"].mean()), 4)
             if len(df)
             else 0.0
         ),
-
         "avg_wall_time_sec": safe_mean(df, "wall_time_sec", digits=4),
         "avg_total_duration_sec": safe_mean(df, "total_duration_sec", digits=4),
         "avg_load_duration_sec": safe_mean(df, "load_duration_sec", digits=4),
-
-        "avg_prompt_tokens_per_sec": safe_mean(
-            df,
-            "prompt_tokens_per_sec",
-            digits=4,
-        ),
-        "avg_generation_tokens_per_sec": safe_mean(
-            df,
-            "generation_tokens_per_sec",
-            digits=4,
-        ),
-
-        "avg_model_process_peak_rss_mb": safe_mean(
-            df,
-            "model_process_peak_rss_mb",
-            digits=2,
-        ),
-        "max_model_process_peak_rss_mb": safe_max(
-            df,
-            "model_process_peak_rss_mb",
-            digits=2,
-        ),
-
-        "avg_system_used_memory_peak_mb": safe_mean(
-            df,
-            "system_used_memory_peak_mb",
-            digits=2,
-        ),
-        "max_system_used_memory_peak_mb": safe_max(
-            df,
-            "system_used_memory_peak_mb",
-            digits=2,
-        ),
+        "avg_prompt_tokens_per_sec": safe_mean(df, "prompt_tokens_per_sec", digits=4),
+        "avg_generation_tokens_per_sec": safe_mean(df, "generation_tokens_per_sec", digits=4),
+        "avg_model_process_peak_rss_mb": safe_mean(df, "model_process_peak_rss_mb", digits=2),
+        "max_model_process_peak_rss_mb": safe_max(df, "model_process_peak_rss_mb", digits=2),
+        "avg_system_used_memory_peak_mb": safe_mean(df, "system_used_memory_peak_mb", digits=2),
+        "max_system_used_memory_peak_mb": safe_max(df, "system_used_memory_peak_mb", digits=2),
+        "thinking_rate": safe_mean(df, "has_thinking", digits=4),
+        "thinking_fallback_rate": safe_mean(df, "used_thinking_fallback", digits=4),
     }
 
     return df, summary
@@ -338,6 +280,9 @@ def main():
     print(f"Quantization: {QUANTIZATION_NAME}")
     print(f"Runtime processor: {RUNTIME_PROCESSOR}")
     print(f"Requested num_gpu: {OLLAMA_NUM_GPU}")
+    print(f"Requested ollama think: {OLLAMA_THINK}")
+    print(f"Reasoning mode: {REASONING_MODE}")
+    print(f"Prompt prefix: {repr(PROMPT_PREFIX)}")
     print(f"Source repo: {MODEL_SOURCE_REPO}")
     print(f"Artifact family: {ARTIFACT_FAMILY}")
     print(f"Quantization pipeline: {QUANTIZATION_PIPELINE}")
